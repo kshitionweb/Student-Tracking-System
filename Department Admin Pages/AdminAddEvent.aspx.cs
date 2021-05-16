@@ -1,62 +1,63 @@
-<%@ Page Title="" Language="C#" MasterPageFile="~/Pages/Master Pages/AdminMasterPage.Master" AutoEventWireup="true" CodeBehind="AdminAddEvent.aspx.cs" Inherits="Student_Tracking_System.Pages.Department_Admin_Pages.AdminAddEvent" %>
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.IO;
+using System.Data.SqlClient;
+using System.Configuration;
 
-<asp:Content ID="Content1" ContentPlaceHolderID="head" runat="server">
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="ContentPlaceHolder1" runat="server">
-    <div class="container admin-add-event">
-        <div class="section">
-            <table class="table profile-table">
-                <tbody>
-                    <tr>
-                        <td>
-                            <asp:Image ID="imgUploadEvent" runat="server" class="imgUploadEvent" />
-                        </td>
-                        <td>
-                            <asp:FileUpload ID="fuEventImgUpload" runat="server" />
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Event Name :</th>
-                        <td>
-                            <asp:TextBox ID="txtUploadEventName" runat="server" class="form-control"></asp:TextBox>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Event Date :</th>
-                        <td>
-                            <asp:TextBox ID="txtUploadEventDate" runat="server" class="form-control" TextMode="Date"></asp:TextBox>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Event Venue :</th>
-                        <td>
-                            <asp:TextBox ID="txtUploadEventVenue" runat="server" class="form-control"></asp:TextBox>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Event Details :</th>
-                        <td>
-                            <asp:TextBox ID="txtUploadEventDetails" runat="server" TextMode="MultiLine" Rows="10" class="form-control"></asp:TextBox>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <asp:Button ID="btnSubmitEventDetails" runat="server" Text="Submit" class="" OnClick="btnSubmitEventDetails_Click" data-toggle="modal" data-target="#myModal" />
-        </div>
-    </div>
-    <div class="modal front-modal" id="myModal">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <%--<asp:RequiredFieldValidator ID="rvSearchEvent" runat="server" ErrorMessage="Please enter Event Name, Date or Venue" ControlToValidate="txtSearch"></asp:RequiredFieldValidator><br />--%>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-danger" data-dismiss="modal">OK</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</asp:Content>
+namespace Student_Tracking_System.Pages.Department_Admin_Pages
+{
+    public partial class AdminAddEvent : System.Web.UI.Page
+    {
+        SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["ConnectionString"].ToString());
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            conn.Open();
+            if (!IsPostBack)
+            {
+            }
+        }
+
+        protected void btnSubmitEventDetails_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (fuEventImgUpload.HasFile)
+                {
+                    string fileExt = Path.GetExtension(fuEventImgUpload.PostedFile.FileName);
+                    if (fileExt != ".JPEG" && fileExt != ".jpeg" && fileExt != ".JPG" && fileExt != ".jpg" && fileExt != ".png" && fileExt != ".tif" && fileExt != ".tiff")
+                    {
+                        Page.ClientScript.RegisterStartupScript(typeof(Page), "successfull", "alert('Please upload only jpeg, jpg, png, tif, tiff'); window.location = 'AdminAddEvent.aspx';", true);
+                    }
+                    else
+                    {
+                        string fileName = Path.GetFileName(fuEventImgUpload.FileName);
+
+                        fuEventImgUpload.SaveAs(Server.MapPath("~/EventImages/" + fileName));
+                        imgUploadEvent.ImageUrl = "~/EventImages/" + fileName;
+
+                        DateTime date = DateTime.ParseExact(txtUploadEventDate.Text.Trim(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+
+                        string insert_event = "insert into Event_Table values (@event_name,@event_date,@event_venue,@event_details,@event_image_path)";
+                        SqlCommand cmd = new SqlCommand(insert_event, conn);
+                        cmd.Parameters.AddWithValue("@event_name", txtUploadEventName.Text);
+                        cmd.Parameters.AddWithValue("@event_date", txtUploadEventDate.Text);
+                        cmd.Parameters.AddWithValue("@event_venue", txtUploadEventVenue.Text);
+                        cmd.Parameters.AddWithValue("@event_details", txtUploadEventDetails.Text);
+                        cmd.Parameters.AddWithValue("@event_image_path", "~/EventImages/" + fileName);
+
+                        cmd.ExecuteNonQuery();
+                        Response.Redirect("AdminEvents.aspx");
+                    }
+                }
+            }
+            catch (Exception ae)
+            {
+                txtUploadEventName.Text = ae.ToString();
+            }
+        }
+    }
+}
